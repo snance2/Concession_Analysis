@@ -1,0 +1,1322 @@
+---
+title: "Analysis of Concession Claims by Product Type and Sales Office"
+author: "Stephen Nance"
+date: "May 6, 2022"
+output: 
+  word_document
+  
+---
+
+```{r install_packages, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE, results='hide'}
+require(dplyr) || install.packages("dplyr")
+require(ggplot2)|| install.packages("ggplot2")
+require(magrittr) || install.packages("magrittr")
+require(flextable) || install.packages("flextable", type = "binary")
+require(colorspace) || install.packages("colorspace")
+
+```
+```{r set_directory_read_file, echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+setwd ("C:/Users/lbmpv/OneDrive - Trane Technologies/Documents/CIS663/Concession_Analysis")
+df0 <- read.csv2("CIS663_Concession_Claim_Dataset.csv", header = TRUE, sep = ",", skipNul = TRUE)
+colnames(df0) <- c(i..Office="Office", Product="Product", Cdollar="Cdollar", Cunit="Cunit", Ushipped="Ushipped")
+```
+
+# Abstract:
+
+Product warranty is defined as a written promise from a company to repair or replace a product that develops a fault within a particular period of time, or to do a piece of work again if it is not satisfactory. (Cambridge Dictionary, 2022) This is particularly important for customers who need products with specialized functions and options, as the warranty policy transfers specified risk scenarios from the customer, to the manufacturer, reducing uncertainty that a product will not function or provide a specified function. However, these specialized product use cases can create unforeseen performance or function issues that need to be resolved.  This can lead to additional expenses not covered under the manufactures warranty or included in the installation quotation.  These unexpected expected expenses can strain a customer relationship often resulting in a negotiation of expense.  The process in referred to as a concesion to the warranty policy. The overuse of concession claims can reduce the financial performance of the company.  While each concession claim is reviewed on an incremental basis this analysis will evaluate if any sales offices have a concession claim proportion that is not equal to the product level concession proportion.
+
+In preparation for this analysis a literature review on concession analysis was conducted.  Three papers on the topic of concession analysis were observed and reviewed. “Sales Concessions in the US Housing Market”. (Hayunga, 2016), “Concession Decision Model of BOT Projects Based on a Real Options Approach”. (Yang & Dia, 2006), and “Unilateral Concessions from the Other Party: Concession Behavior, Attributions, and Negotiation Judgements”. (Kwon & Weingart, 2004).  These papers were found to analyze the effects or benefits of concessions but no research was found evaluating concession disparity among groups of sales offices or by product type.
+
+In this project, the following research question will be addressed.  Do some sales offices claim a higher proportion of concession units at a product level as compared to the proportion of concession units claimed for the entire product level?  The data for the analysis is from a manufacturing company producing industrial products that sells their products through a network of sales offices in the United States.  The data contains concession data from each sales offices between the years 2018 and 2021.  The analysis was performed in R Markdown using the R function prop.test().  This function performs a two-proportions z-test to compare two observed proportions between sales office concession claim proportions, and proportion of concession claims for the product.  The function provides a Chi-Square test statistic.  The Chi-Square test statistics are evaluated using one degree of freedom and an Alpha of 0.05.  Under these assumptions the null hypothesis is rejected for Chi-Square value greater than 3.841.  The analysis found that eighteen of the nineteen products had sales offices where the office concession proportion had a Chi-Square above 3.841.  Product 11 has forty under performing sales offices, the greatest number for a single product, with a Chi-Square above 3.814.
+
+The recommendation is to investigate the causes for these sales offices to be under performing with relation to proportion of concession units. Some areas of focus could be patterns with particular customers, or patterns with unique product applications.
+
+# Introduction:
+
+The Cambridge Dictionary website defines warranty as a written promise from a company to repair or replace a product that develops a fault within a particular period of time, or to do a piece of work again if it is not satisfactory. (Cambridge Dictionary, 2022) The warranty policy transfers specified risk scenarios from the customer, to the manufacturer, reducing uncertainty that a product will not function or provide a specified function. This is particularly important for customers who need products with specialized functions and options. These specialized product use cases can create unforeseen performance or function issues that need to be resolved. Resolving these issues can create expenses that are not covered by the terms of the product warranty, as the unit is functioning, but needs special modification to perform in the specialized use case. This can result in additional expenses not covered by the manufacturer’s warranty or included in the equipment installation quotation.  These situations and unexpected expenses can strain or jeopardize the customer relationship often resulting in a negotiation of expense responsibility. This practice is known as a concession to the warranty policy and is tracked as a “concession claim”. Managing concession claims is an important topic for businesses, as these claims represent a financial expense to the business and should be managed against the potential risk of harming the customer relationship. The overuse of concession claims can reduce the overall financial performance of a company if future business does not cover the expenses concessioned. Given the delicate nature of the topic, sales offices can be incentivized to concession expenses to avoid difficult conversations with the customer. This study will evaluate concession claims from a manufacturing company producing industrial products, that sells their products through a network of sales offices, in the United States. 
+
+During the concession approval process the concession cost is reviewed and approved on a per claim basis. Due to the incremental nature of the approval process, the focus of this evaluation will examine the number of concession units by sales office, to determine if any offices have a higher concession proportion than the concession proportion for a given product. Sales offices with a concession unit proportion higher than the product level concession unit proportion will be considered under performing offices.
+  
+\newpage
+# Literature Review
+
+Three research articles were reviewed on the subject of concessions. The first article is “Sales Concessions in the US Housing Market”. (Hayunga, 2016) The author uses a 2010 – 2012 dataset from National Association of Realtors (NAR) to investigate the motivation and characteristics of homeowners that utilize concessions, and the impact concessions have on transaction price and market duration. The findings show when sellers have bargaining power, transactions including concessions are higher price and have shorter market duration. The findings also show when buyers have bargaining power, transactions including concessions are lower price and have longer market duration. The second article is “Concession Decision Model of BOT Projects Based on a Real Options Approach”. (Yang & Dia, 2006) The author evaluates the uses of Monte Carlo simulation to predict the value of three concessionary options; adjust price, develop surrounding land, and expand project capacity. The findings show the Monte Carlo model and solution algorithm have acceptable predictive results. The third article is “Unilateral Concessions from the Other Party: Concession Behavior, Attributions, and Negotiation Judgements”. (Kwon & Weingart, 2004) In this paper the author evaluates the effect of concessions in distributive negotiations, which involve the distribution of value by price across two or more parties. The findings indicate that not only the source of concession matters to it’s perceived value, but also when the concession is made in the negotiation. There was no research found on evaluating concession disparity among groups of sales offices or by product, leading to the belief this topic has not been evaluated.
+
+# Research Question
+
+In this project, the following research question will be addressed.  Do some sales offices claim a higher proportion of concession units at a product level as compared to the proportion of concession units claimed for the entire product level? To examine this question R software will be used perform a two-proportions z-test to compare two observed proportions between sales office concession claim proportions and proportion of concession claims for the product. Sales office's with a Pearson’s Chi-Square value greater than 3.841 will be considered under performing offices, as the probability of the office claims proportion equaling the product claims proportion will be less than 5%. R Markdown will be used to publish the analysis into a Microsoft Word file.
+\newpage
+# Theory
+
+If some sales offices have a higher concession claims proportion than the product claims proportion, the following hypothesis are expected to be true:
+
+$$H_0: p_A = p_B$$.
+$$H_a: p_A \neq p_B$$.
+
+$p_A$ will be the proportion of sales office claim units and $p_B$ will be the proportion of product level claim units.The hypothesis test will be applied using Pearson's chi-squared test statistic using Alpha = 0.05.  Using Alpha of 0.05, the probability of incorrectly rejecting the null hypothesis will be less than 5%.  Or to state differently, we can have at least a 95% confidence level the null hypothesis has been correctly rejected.  
+
+Results from the two proportion comparison will be expressed using Pearson's Chi-Square test statistic.  The formula for Pearson's Chi-Square Test Statistic is shown below.
+
+Formula for Chi-Square Test Statistic:
+
+$$X^2 =\Sigma \frac{(O_i - E_i)^2}{E_i}$$
+The two-proportions z-test function in R will be used.  The square of the z-test statistic will equal the Pearson's Chi-Square Test Statistic.  The output of the two-proportions z-test function will be Pearson's Chi-Square Test Statistic.  For reference, the formula for Z-Test Statistics is shown below.
+
+Formula for Z-Test Statistic:
+$$z =\frac{pA - pB}{\sqrt{pq/n_A+pq/n_B}}$$
+
+$$p_A = \frac{x1}{n1}$$
+$$p_B = \frac{x2}{n2}$$
+
+
+
+\newpage
+# Data Description
+
+The dataset for this project is from a manufacturing company, producing industrial products that sell their `r length(unique(df0$Product))` products through a network of `r length(unique(df0$Office))` sales offices, in the United States.  The data contains concession data from each sales office between the years 2018 and 2021.  The data variables are office name, product name, concession cost by office, number of concession units by office, and number of units shipped to each office. The variables office and product are categorical and the variables concession cost, concession units, and units shipped are numerical.  
+
+For this analysis the dataset will be imported from CSV file into a data frame.  The data will be examined to remove any null values.  Separate data frames will be created for each product name.  To ensure adequate sample size for each office, only sales offices shipping 30 or more units will be included in the data frame. For this analysis the following R packages will be utilized: (1) colorspace, (Zeileis A, Fisher JC, Hornik K, Ihaka R, McWhite CD, Murrell P, Stauffer R, Wilke CO, 2020) and (Zeileis A, Hornik K, Murrell P, 2009)  (2) dplyr (Hadley Wickham, Romain François, Lionel Henry and Kirill Müller, 2022),  (3) flextable R package, (David Gohel, 2022), (4) ggplot2, (H. Wickham, 2016), (5) magrittr, (Stefan Milton Bache and Hadley Wickham, 2022), (6) rmarkdown R package, (JJ Allaire and Yihui Xie and Jonathan McPherson and Javier Luraschi and Kevin Ushey and Aron Atkins and Hadley Wickham and Joe Cheng and Winston Chang and Richard Iannone, 2022).
+
+# Data Analysis
+The R function, prop.test(), will be used to evaluate the concession unit proportion of each office against the concession unit proportion of the product line.  The function format for prop.test() is prop.test(x = c(x1, x2), n = c(n1, n2)).  x1 and x2 are survivors (Unit Shipped - Concession Units).  x1 is the number of survivors from the product level population and x2 is the number of survivors from the office level population.  n1 and n2 are the number of units shipped from the respective populations.  n1 is the number of units shipped for the product level and n2 is the number of units shipped to each office. 
+
+Table 1 shows a partial example of the Concession Unit Dataset being evaluated. 
+
+```{r dataset, echo=FALSE, warning=FALSE, tab.lp = "tab"}
+d1 <- flextable(head(df0))
+d1 <- colformat_double(d1, digits = 2)
+d1 <- set_header_labels(d1, Office = "Office", Product = "Product", Cdollar = "Concession Cost ($)", Cunit = "Concession Units", Ushipped = "Units Shippped")
+d1 <- set_table_properties(d1, layout = "autofit", width = 1)
+d1 <- theme_vanilla(d1)
+d1 <- add_footer_lines(d1, "Partial example of dataset")
+d1 <- color(d1, part = "footer", color = "#666666")
+d1 <- set_caption(d1, caption = "Concession Claim Dataset")
+d1
+
+```
+\newpage
+# Analysis Results
+### Product 1
+
+Table 2 provides a summary of under performing offices for Product 1, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841, and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product1_dataset, echo=FALSE, warning=FALSE}
+df1 <- df0[df0$Product == 'PRODUCT_1', ]
+df1 <- df1 %>% filter(Ushipped >=30)
+df1 <- df1 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df1 <- df1 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df1 <- df1 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df1 <- df1 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df1 <- df1 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df1 <- df1 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df1 <- df1 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df1$P_Values <- apply(df1[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df1$Chi_Square <- apply(df1[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P1a_underPerform <- df1 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P1_underPerform <- df1 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p1 <- flextable(P1_underPerform)
+p1 <- colformat_double(p1, digits = 2)
+p1 <- set_header_labels(p1, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p1 <- set_table_properties(p1, layout = "autofit", width = 1)
+p1 <- theme_vanilla(p1)
+p1 <- add_footer_lines(p1, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p1 <- color(p1, part = "footer", color = "#666666")
+p1 <- set_caption(p1, caption = "Under Performing Offices - Product 1")
+p1
+
+
+```
+There are `r length(df1$Office)` sales offices that have sold 30 or more of Product 1. The average concession claim proportion for Product 1 is `r format((sum(df1$Cunit)/sum(df1$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 1 is `r prettyNum((format((sum(df1$Cdollar)/sum(df1$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P1_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 1 is `r prettyNum((format((sum(df1$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P1_underPerform$Cdollar))/(sum(df1$Cdollar))*100), digit=2)` percent of the concession cost for Product 1.
+
+Figure 2 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 1.
+
+``` {r product_1 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 2 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 1',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P1_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P1_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+
+### Product 2
+
+Table 3 provides a summary of under performing offices for Product 2, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product2_dataset, echo=FALSE, warning=FALSE}
+df2 <- df0[df0$Product == 'PRODUCT_2', ]
+df2 <- df2 %>% filter(Ushipped >=30)
+df2 <- df2 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df2 <- df2 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df2 <- df2 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df2 <- df2 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df2 <- df2 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df2 <- df2 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df2 <- df2 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df2$P_Values <- apply(df2[c("Non_Cunit", "Sum_Prod_Non_Cunit", "Ushipped", "Sum_Prod_Shipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df2$Chi_Square <- apply(df2[c("Non_Cunit", "Sum_Prod_Non_Cunit", "Ushipped", "Sum_Prod_Shipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P2a_underPerform <- df2 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P2_underPerform <- df2 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p2 <- flextable(P2_underPerform)
+p2 <- colformat_double(p2, digits = 2)
+p2 <- set_header_labels(p2, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p2 <- set_table_properties(p2, layout = "autofit", width = 1)
+p2 <- theme_vanilla(p2)
+p2 <- add_footer_lines(p2, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p2 <- color(p2, part = "footer", color = "#666666")
+p2 <- set_caption(p2, caption = "Under Performing Offices - Product 2")
+p2
+
+```
+There are `r length(df2$Office)` sales offices that have sold 30 or more of Product 2. There are `r length(P2_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 2 is `r format((sum(df2$Cunit)/sum(df2$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 2 is `r prettyNum((format((sum(df2$Cdollar)/sum(df2$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P2_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 2 is `r prettyNum((format((sum(df2$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P2_underPerform$Cdollar))/(sum(df2$Cdollar))*100), digit=2)` percent of the concession cost for Product 2.
+
+Figure 3 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 2.
+
+``` {r product_2 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 3 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 2',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P2_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P2_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 3
+
+Table 4 provides a summary of under performing offices for Product 3, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product3_dataset, echo=FALSE, warning=FALSE}
+df3 <- df0[df0$Product == 'PRODUCT_3', ]
+df3 <- df3 %>% filter(Ushipped >=30)
+df3 <- df3 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df3 <- df3 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df3 <- df3 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df3 <- df3 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df3 <- df3 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df3 <- df3 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df3 <- df3 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df3$P_Values <- apply(df3[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df3$Chi_Square <- apply(df3[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P3a_underPerform <- df3 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P3_underPerform <- df3 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p3 <- flextable(P3_underPerform)
+p3 <- colformat_double(p3, digits = 2)
+p3 <- set_header_labels(p3, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p3 <- set_table_properties(p3, layout = "autofit", width = 1)
+p3 <- theme_vanilla(p3)
+p3 <- add_footer_lines(p3, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p3 <- color(p3, part = "footer", color = "#666666")
+p3 <- set_caption(p3, caption = "Under Performing Offices - Product 3")
+p3
+
+```
+There are `r length(df3$Office)` sales offices that have sold 30 or more of Product 3. There are `r length(P3_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 3 is `r format((sum(df3$Cunit)/sum(df3$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 3 is `r prettyNum((format((sum(df3$Cdollar)/sum(df3$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P3_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 3 is `r prettyNum((format((sum(df3$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P3_underPerform$Cdollar))/(sum(df3$Cdollar))*100), digit=2)` percent of the concession cost for Product 3.
+
+Figure 4 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 3.
+
+``` {r product_3 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 4 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 3',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P3_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P3_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 4
+
+Table 5 provides a summary of under performing offices for Product 4, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product4_dataset, echo=FALSE, warning=FALSE}
+df4 <- df0[df0$Product == 'PRODUCT_4', ]
+df4 <- df4 %>% filter(Ushipped >=30)
+df4 <- df4 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df4 <- df4 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df4 <- df4 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df4 <- df4 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df4 <- df4 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df4 <- df4 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df4 <- df4 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df4$P_Values <- apply(df4[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df4$Chi_Square <- apply(df4[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P4a_underPerform <- df4 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P4_underPerform <- df4 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p4 <- flextable(P4_underPerform)
+p4 <- colformat_double(p4, digits = 2)
+p4 <- set_header_labels(p4, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p4 <- set_table_properties(p4, layout = "autofit", width = 1)
+p4 <- theme_vanilla(p4)
+p4 <- add_footer_lines(p4, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p4 <- color(p4, part = "footer", color = "#666666")
+p4 <- set_caption(p4, caption = "Under Performing Offices - Product 4")
+p4
+
+```
+There are `r length(df4$Office)` sales offices that have sold 30 or more of Product 4. There are `r length(P4_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 4 is `r format((sum(df4$Cunit)/sum(df4$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 4 is `r prettyNum((format((sum(df4$Cdollar)/sum(df4$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P4_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 4 is `r prettyNum((format((sum(df4$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P4_underPerform$Cdollar))/(sum(df4$Cdollar))*100), digit=2)` percent of the concession cost for Product 4.
+
+Figure 5 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 4.
+
+``` {r product_4 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 5 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 4',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P4_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P4_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+### Product 5
+
+Table 6 provides a summary of under performing offices for Product 5, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product5_dataset, echo=FALSE, warning=FALSE}
+df5 <- df0[df0$Product == 'PRODUCT_5', ]
+df5 <- df5 %>% filter(Ushipped >=30)
+df5 <- df5 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df5 <- df5 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df5 <- df5 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df5 <- df5 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df5 <- df5 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df5 <- df5 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df5 <- df5 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df5$P_Values <- apply(df5[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df5$Chi_Square <- apply(df5[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P5a_underPerform <- df5 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P5_underPerform <- df5 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p5 <- flextable(P5_underPerform)
+p5 <- colformat_double(p5, digits = 2)
+p5 <- set_header_labels(p5, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p5 <- set_table_properties(p5, layout = "autofit", width = 1)
+p5 <- theme_vanilla(p5)
+p5 <- add_footer_lines(p5, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p5 <- color(p5, part = "footer", color = "#666666")
+p5 <- set_caption(p5, caption = "Under Performing Offices - Product 5")
+p5
+
+```
+There are `r length(df5$Office)` sales offices that have sold 30 or more of Product 5. There are `r length(P5_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 5 is `r format((sum(df5$Cunit)/sum(df5$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 5 is `r prettyNum((format((sum(df5$Cdollar)/sum(df5$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P5_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 5 is `r prettyNum((format((sum(df5$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P5_underPerform$Cdollar))/(sum(df5$Cdollar))*100), digit=2)` percent of the concession cost for Product 5.
+
+Figure 6 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 5.
+
+``` {r product_5 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 6 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 5',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P5_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P5_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 6
+
+Table 7 provides a summary of under performing offices for Product 6, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product6_dataset, echo=FALSE, warning=FALSE}
+df6 <- df0[df0$Product == 'PRODUCT_6', ]
+df6 <- df6 %>% filter(Ushipped >=30)
+df6 <- df6 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df6 <- df6 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df6 <- df6 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df6 <- df6 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df6 <- df6 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df6 <- df6 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df6 <- df6 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df6$P_Values <- apply(df6[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df6$Chi_Square <- apply(df6[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P6a_underPerform <- df6 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P6_underPerform <- df6 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p6 <- flextable(P6_underPerform)
+p6 <- colformat_double(p6, digits = 2)
+p6 <- set_header_labels(p6, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p6 <- set_table_properties(p6, layout = "autofit", width = 1)
+p6 <- theme_vanilla(p6)
+p6 <- add_footer_lines(p6, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p6 <- color(p6, part = "footer", color = "#666666")
+p6 <- set_caption(p6, caption = "Under Performing Offices - Product 6")
+p6
+
+```
+There are `r length(df6$Office)` sales offices that have sold 30 or more of Product 6. There are `r length(P6_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 6 is `r format((sum(df6$Cunit)/sum(df6$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 6 is `r prettyNum((format((sum(df6$Cdollar)/sum(df6$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P6_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 6 is `r prettyNum((format((sum(df6$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P6_underPerform$Cdollar))/(sum(df6$Cdollar))*100), digit=2)` percent of the concession cost for Product 6.
+
+Figure 7 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 6.
+
+``` {r product_6 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 7 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 6',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P6_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P6_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 7
+
+Table 8 provides a summary of under performing offices for Product 7, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product7_dataset, echo=FALSE, warning=FALSE}
+df7 <- df0[df0$Product == 'PRODUCT_7', ]
+df7 <- df7 %>% filter(Ushipped >=30)
+df7 <- df7 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df7 <- df7 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df7 <- df7 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df7 <- df7 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df7 <- df7 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df7 <- df7 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df7 <- df7 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df7$P_Values <- apply(df7[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df7$Chi_Square <- apply(df7[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P7a_underPerform <- df7 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P7_underPerform <- df7 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p7 <- flextable(P7_underPerform)
+p7 <- colformat_double(p7, digits = 2)
+p7 <- set_header_labels(p7, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p7 <- set_table_properties(p7, layout = "autofit", width = 1)
+p7 <- theme_vanilla(p7)
+p7 <- add_footer_lines(p7, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p7 <- color(p7, part = "footer", color = "#666666")
+p7 <- set_caption(p7, caption = "Under Performing Offices - Product 7")
+p7
+
+```
+There are `r length(df7$Office)` sales offices that have sold 30 or more of Product 7. There are `r length(P7_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 7 is `r format((sum(df7$Cunit)/sum(df7$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 7 is `r prettyNum((format((sum(df7$Cdollar)/sum(df7$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P7_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 7 is `r prettyNum((format((sum(df7$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P7_underPerform$Cdollar))/(sum(df7$Cdollar))*100), digit=2)` percent of the concession cost for Product 7.
+
+Figure 8 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 7.
+
+``` {r product_7 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 8 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 7',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P7_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P7_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 8
+
+Table 9 provides a summary of under performing offices for Product 8, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product8_dataset, echo=FALSE, warning=FALSE}
+df8 <- df0[df0$Product == 'PRODUCT_8', ]
+df8 <- df8 %>% filter(Ushipped >=30)
+df8 <- df8 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df8 <- df8 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df8 <- df8 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df8 <- df8 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df8 <- df8 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df8 <- df8 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df8 <- df8 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df8$P_Values <- apply(df8[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df8$Chi_Square <- apply(df8[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P8a_underPerform <- df8 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P8_underPerform <- df8 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p8 <- flextable(P8_underPerform)
+p8 <- colformat_double(p8, digits = 2)
+p8 <- set_header_labels(p8, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p8 <- set_table_properties(p8, layout = "autofit", width = 1)
+p8 <- theme_vanilla(p8)
+p8 <- add_footer_lines(p8, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p8 <- color(p8, part = "footer", color = "#666666")
+p8 <- set_caption(p8, caption = "Under Performing Offices - Product 8")
+p8
+
+```
+There are `r length(df8$Office)` sales offices that have sold 30 or more of Product 8. There are `r length(P8_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 8 is `r format((sum(df8$Cunit)/sum(df8$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 8 is `r prettyNum((format((sum(df8$Cdollar)/sum(df8$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P8_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 8 is `r prettyNum((format((sum(df8$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P8_underPerform$Cdollar))/(sum(df8$Cdollar))*100), digit=2)` percent of the concession cost for Product 8.
+
+Figure 9 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 8.
+
+``` {r product_8 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 9 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 8',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P8_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P8_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 9
+
+Table 10 provides a summary of under performing offices for Product 9, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product9_dataset, echo=FALSE, warning=FALSE}
+df9 <- df0[df0$Product == 'PRODUCT_9', ]
+df9 <- df9 %>% filter(Ushipped >=30)
+df9 <- df9 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df9 <- df9 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df9 <- df9 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df9 <- df9 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df9 <- df9 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df9 <- df9 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df9 <- df9 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df9$P_Values <- apply(df9[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df9$Chi_Square <- apply(df9[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P9a_underPerform <- df9 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P9_underPerform <- df9 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p9 <- flextable(P9_underPerform)
+p9 <- colformat_double(p9, digits = 2)
+p9 <- set_header_labels(p9, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p9 <- set_table_properties(p9, layout = "autofit", width = 1)
+p9 <- theme_vanilla(p9)
+p9 <- add_footer_lines(p9, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05\nPartial list showing 10 rows")
+p9 <- color(p9, part = "footer", color = "#666666")
+p9 <- set_caption(p9, caption = "Under Performing Offices - Product 9")
+p9
+
+```
+There are `r length(df9$Office)` sales offices that have sold 30 or more of Product 9. There are `r length(P9_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 9 is `r format((sum(df9$Cunit)/sum(df9$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 9 is `r prettyNum((format((sum(df9$Cdollar)/sum(df9$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P9_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 9 is `r prettyNum((format((sum(df9$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P9_underPerform$Cdollar))/(sum(df9$Cdollar))*100), digit=2)` percent of the concession cost for Product 9.
+
+Figure 10 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 9.
+
+``` {r product_9 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 10 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 9',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P9_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P9_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 10
+
+Table 11 provides a summary of under performing offices for Product 10, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product10_dataset, echo=FALSE, warning=FALSE}
+df10 <- df0[df0$Product == 'PRODUCT_10', ]
+df10 <- df10 %>% filter(Ushipped >=30)
+df10 <- df10 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df10 <- df10 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df10 <- df10 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df10 <- df10 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df10 <- df10 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df10 <- df10 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df10 <- df10 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df10$P_Values <- apply(df10[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df10$Chi_Square <- apply(df10[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P10a_underPerform <- df10 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P10_underPerform <- df10 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p10 <- flextable(P10_underPerform)
+p10 <- colformat_double(p10, digits = 2)
+p10 <- set_header_labels(p10, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p10 <- set_table_properties(p10, layout = "autofit", width = 1)
+p10 <- theme_vanilla(p10)
+p10 <- add_footer_lines(p10, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p10 <- color(p10, part = "footer", color = "#666666")
+p10 <- set_caption(p10, caption = "Under Performing Offices - Product 10")
+p10
+
+```
+There are `r length(df10$Office)` sales offices that have sold 30 or more of Product 10. There are `r length(P10_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 10 is `r format((sum(df10$Cunit)/sum(df10$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 10 is `r prettyNum((format((sum(df10$Cdollar)/sum(df10$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P10_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 10 is `r prettyNum((format((sum(df10$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P10_underPerform$Cdollar))/(sum(df10$Cdollar))*100), digit=2)` percent of the concession cost for Product 10.
+
+Figure 11 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 10.
+
+``` {r product_10 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 11 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 10',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P10_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P10_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 11
+
+Table 12 provides a summary of under performing offices for Product 11, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product11_dataset, echo=FALSE, warning=FALSE}
+df11 <- df0[df0$Product == 'PRODUCT_11', ]
+df11 <- df11 %>% filter(Ushipped >=30)
+df11 <- df11 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df11 <- df11 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df11 <- df11 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df11 <- df11 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df11 <- df11 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df11 <- df11 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df11 <- df11 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df11$P_Values <- apply(df11[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df11$Chi_Square <- apply(df11[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P11a_underPerform <- df11 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P11_underPerform <- df11 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p11 <- flextable(P11_underPerform)
+p11 <- colformat_double(p11, digits = 2)
+p11 <- set_header_labels(p11, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p11 <- set_table_properties(p11, layout = "autofit", width = 1)
+p11 <- theme_vanilla(p11)
+p11 <- add_footer_lines(p11, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p11 <- color(p11, part = "footer", color = "#666666")
+p11 <- set_caption(p11, caption = "Under Performing Offices - Product 11")
+p11
+
+```
+There are `r length(df11$Office)` sales offices that have sold 30 or more of Product 11. There are `r length(P11_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 11 is `r format((sum(df11$Cunit)/sum(df11$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 11 is `r prettyNum((format((sum(df11$Cdollar)/sum(df11$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P11_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 11 is `r prettyNum((format((sum(df11$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P11_underPerform$Cdollar))/(sum(df11$Cdollar))*100), digit=2)` percent of the concession cost for Product 11.
+
+Figure 12 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 11.
+
+``` {r product_11 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 12 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 11',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P11_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P11_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 12
+
+Table 13 provides a summary of under performing offices for Product 12, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product12_dataset, echo=FALSE, warning=FALSE}
+df12 <- df0[df0$Product == 'PRODUCT_12', ]
+df12 <- df12 %>% filter(Ushipped >=30)
+df12 <- df12 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df12 <- df12 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df12 <- df12 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df12 <- df12 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df12 <- df12 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df12 <- df12 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df12 <- df12 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df12$P_Values <- apply(df12[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df12$Chi_Square <- apply(df12[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P12a_underPerform <- df12 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P12_underPerform <- df12 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p12 <- flextable(P12_underPerform)
+p12 <- colformat_double(p12, digits = 2)
+p12 <- set_header_labels(p12, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p12 <- set_table_properties(p12, layout = "autofit", width = 1)
+p12 <- theme_vanilla(p12)
+p12 <- add_footer_lines(p12, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p12 <- color(p12, part = "footer", color = "#666666")
+p12 <- set_caption(p12, caption = "Under Performing Offices - Product 12")
+p12
+
+```
+There are `r length(df12$Office)` sales offices that have sold 30 or more of Product 12. There is `r length(P12_underPerform$Office)` sales office that is under performing.  The average concession claim proportion for Product 12 is `r format((sum(df12$Cunit)/sum(df12$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 12 is `r prettyNum((format((sum(df12$Cdollar)/sum(df12$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P12_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 12 is `r prettyNum((format((sum(df12$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing office represents `r format(((sum(P12_underPerform$Cdollar))/(sum(df12$Cdollar))*100), digit=2)` percent of the concession cost for Product 12.
+
+Figure 13 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 12.
+
+``` {r product_12 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 13 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 12',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P12_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P12_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 13
+
+Table 14 provides a summary of under performing offices for Product 13, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product13_dataset, echo=FALSE, warning=FALSE}
+df13 <- df0[df0$Product == 'PRODUCT_13', ]
+df13 <- df13 %>% filter(Ushipped >=30)
+df13 <- df13 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df13 <- df13 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df13 <- df13 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df13 <- df13 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df13 <- df13 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df13 <- df13 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df13 <- df13 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df13$P_Values <- apply(df13[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df13$Chi_Square <- apply(df13[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P13a_underPerform <- df13 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P13_underPerform <- df13 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p13 <- flextable(P13_underPerform)
+p13 <- colformat_double(p13, digits = 2)
+p13 <- set_header_labels(p13, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p13 <- set_table_properties(p13, layout = "autofit", width = 1)
+p13 <- theme_vanilla(p13)
+p13 <- add_footer_lines(p13, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p13 <- color(p13, part = "footer", color = "#666666")
+p13 <- set_caption(p13, caption = "Under Performing Offices - Product 13")
+p13
+
+```
+There are `r length(df13$Office)` sales offices that have sold 30 or more of Product 13. There are `r length(P13_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 13 is `r format((sum(df13$Cunit)/sum(df13$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 13 is `r prettyNum((format((sum(df13$Cdollar)/sum(df13$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P13_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 13 is `r prettyNum((format((sum(df13$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P13_underPerform$Cdollar))/(sum(df13$Cdollar))*100), digit=2)` percent of the concession cost for Product 13.
+
+Figure 14 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 13.
+
+``` {r product_13 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 14 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 13',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P13_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P13_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 14
+
+Table 15 provides a summary of under performing offices for Product 14, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product14_dataset, echo=FALSE, warning=FALSE}
+df14 <- df0[df0$Product == 'PRODUCT_14', ]
+df14 <- df14 %>% filter(Ushipped >=30)
+df14 <- df14 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df14 <- df14 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df14 <- df14 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df14 <- df14 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df14 <- df14 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df14 <- df14 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df14 <- df14 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df14$P_Values <- apply(df14[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df14$Chi_Square <- apply(df14[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P14a_underPerform <- df14 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P14_underPerform <- df14 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p14 <- flextable(P14_underPerform)
+p14 <- colformat_double(p14, digits = 2)
+p14 <- set_header_labels(p14, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p14 <- set_table_properties(p14, layout = "autofit", width = 1)
+p14 <- theme_vanilla(p14)
+p14 <- add_footer_lines(p14, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p14 <- color(p14, part = "footer", color = "#666666")
+p14 <- set_caption(p14, caption = "Under Performing Offices - Product 14")
+p14
+
+```
+There are `r length(df14$Office)` sales offices that have sold 30 or more of Product 14. There is `r length(P14_underPerform$Office)` sales offices that is under performing.  The average concession claim proportion for Product 14 is `r format((sum(df14$Cunit)/sum(df14$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 14 is `r prettyNum((format((sum(df14$Cdollar)/sum(df14$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P14_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 14 is `r prettyNum((format((sum(df14$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing office represents `r format(((sum(P14_underPerform$Cdollar))/(sum(df14$Cdollar))*100), digit=2)` percent of the concession cost for Product 14.
+
+Figure 15 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 14.
+
+``` {r product_14 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 15 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 14',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P14_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P14_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 15
+
+Table 16 provides a summary of under performing offices for Product 15, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product15_dataset, echo=FALSE, warning=FALSE}
+df15 <- df0[df0$Product == 'PRODUCT_15', ]
+df15 <- df15 %>% filter(Ushipped >=30)
+df15 <- df15 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df15 <- df15 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df15 <- df15 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df15 <- df15 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df15 <- df15 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df15 <- df15 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df15 <- df15 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df15$P_Values <- apply(df15[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df15$Chi_Square <- apply(df15[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P15a_underPerform <- df15 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P15_underPerform <- df15 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p15 <- flextable(head(P15_underPerform, n=10))
+p15 <- colformat_double(p15, digits = 2)
+p15 <- set_header_labels(p15, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p15 <- set_table_properties(p15, layout = "autofit", width = 1)
+p15 <- theme_vanilla(p15)
+p15 <- add_footer_lines(p15, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05\nPartial list showing 10 rows")
+p15 <- color(p15, part = "footer", color = "#666666")
+p15 <- set_caption(p15, caption = "Under Performing Offices - Product 15")
+p15
+
+```
+There are `r length(df15$Office)` sales offices that have sold 30 or more of Product 15. There are `r length(P15_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 15 is `r format((sum(df15$Cunit)/sum(df15$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 15 is `r prettyNum((format((sum(df15$Cdollar)/sum(df15$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P15_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 15 is `r prettyNum((format((sum(df15$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P15_underPerform$Cdollar))/(sum(df15$Cdollar))*100), digit=2)` percent of the concession cost for Product 15.
+
+Figure 16 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 15.
+
+``` {r product_15 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 16 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 15',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P15_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P15_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 16
+
+Table 17 provides a summary of under performing offices for Product 16, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product16_dataset, echo=FALSE, warning=FALSE}
+df16 <- df0[df0$Product == 'PRODUCT_16', ]
+df16 <- df16 %>% filter(Ushipped >=30)
+df16 <- df16 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df16 <- df16 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df16 <- df16 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df16 <- df16 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df16 <- df16 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df16 <- df16 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df16 <- df16 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df16$P_Values <- apply(df16[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df16$Chi_Square <- apply(df16[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P16a_underPerform <- df16 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P16_underPerform <- df16 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p16 <- flextable(P16_underPerform)
+p16 <- colformat_double(p16, digits = 2)
+p16 <- set_header_labels(p16, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p16 <- set_table_properties(p16, layout = "autofit", width = 1)
+p16 <- theme_vanilla(p16)
+p16 <- add_footer_lines(p16, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p16 <- color(p16, part = "footer", color = "#666666")
+p16 <- set_caption(p16, caption = "Under Performing Offices - Product 16")
+p16
+
+```
+There are `r length(df16$Office)` sales offices that have sold 30 or more of Product 16. There are `r length(P16_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 16 is `r format((sum(df16$Cunit)/sum(df16$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 16 is `r prettyNum((format((sum(df16$Cdollar)/sum(df16$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P16_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 16 is `r prettyNum((format((sum(df16$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P16_underPerform$Cdollar))/(sum(df16$Cdollar))*100), digit=2)` percent of the concession cost for Product 17.
+
+Figure 17 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 16.
+
+``` {r product_16 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 17 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 16',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P16_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P16_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 17
+
+Table 18 provides a summary of under performing offices for Product 17, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product17_dataset, echo=FALSE, warning=FALSE}
+df17 <- df0[df0$Product == 'PRODUCT_17', ]
+df17 <- df17 %>% filter(Ushipped >=30)
+df17 <- df17 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df17 <- df17 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df17 <- df17 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df17 <- df17 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df17 <- df17 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df17 <- df17 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df17 <- df17 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df17$P_Values <- apply(df17[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df17$Chi_Square <- apply(df17[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P17a_underPerform <- df17 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P17_underPerform <- df17 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p17 <- flextable(P17_underPerform)
+p17 <- colformat_double(p17, digits = 2)
+p17 <- set_header_labels(p17, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p17 <- set_table_properties(p17, layout = "autofit", width = 1)
+p17 <- theme_vanilla(p17)
+p17 <- add_footer_lines(p17, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p17 <- color(p17, part = "footer", color = "#666666")
+p17 <- set_caption(p17, caption = "Under Performing Offices - Product 17")
+p17
+
+```
+There are `r length(df17$Office)` sales offices that have sold 30 or more of Product 17. There are `r length(P17_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 17 is `r format((sum(df17$Cunit)/sum(df17$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 17 is `r prettyNum((format((sum(df17$Cdollar)/sum(df17$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P17_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 17 is `r prettyNum((format((sum(df17$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P17_underPerform$Cdollar))/(sum(df17$Cdollar))*100), digit=2)` percent of the concession cost for Product 18.
+
+Figure 18 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 17.
+
+``` {r product_17 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 18 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 17',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P17_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P17_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 18
+
+Table 19 provides a summary of under performing offices for Product 18, on a concession unit proportional basis as compared to the concession proportion at the product level, These under performing offices have a Pearson's Chi-Square value greater than 3.841 and fall into the reject region of the chi-square density curve.  This indicates there is less than a 5% probability the concession unit proportion of the office will equal the concession unit proportion at the product level.   
+
+```{r product18_dataset, echo=FALSE, warning=FALSE}
+df18 <- df0[df0$Product == 'PRODUCT_18', ]
+df18 <- df18 %>% filter(Ushipped >=30)
+df18 <- df18 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df18 <- df18 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df18 <- df18 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df18 <- df18 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df18 <- df18 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df18 <- df18 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df18 <- df18 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df18$P_Values <- apply(df18[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df18$Chi_Square <- apply(df18[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P18a_underPerform <- df18 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P18_underPerform <- df18 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p18 <- flextable(P18_underPerform)
+p18 <- colformat_double(p18, digits = 2)
+p18 <- set_header_labels(p18, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p18 <- set_table_properties(p18, layout = "autofit", width = 1)
+p18 <- theme_vanilla(p18)
+p18 <- add_footer_lines(p18, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p18 <- color(p18, part = "footer", color = "#666666")
+p18 <- set_caption(p18, caption = "Under Performing Offices - Product 18")
+p18
+
+```
+There are `r length(df18$Office)` sales offices that have sold 30 or more of Product 18. There are `r length(P18_underPerform$Office)` sales offices that are under performing.  The average concession claim proportion for Product 18 is `r format((sum(df18$Cunit)/sum(df18$Ushipped)), digits=2)`.  The average concession claim cost per unit for Product 18 is `r prettyNum((format((sum(df18$Cdollar)/sum(df18$Ushipped)), digits=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of the under performing offices is `r prettyNum((format((sum(P18_underPerform$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The total concession cost of Product 18 is `r prettyNum((format((sum(df18$Cdollar)),digit=2)), big.mark = ",", scientific = FALSE)` dollars.  The under performing offices represent `r format(((sum(P18_underPerform$Cdollar))/(sum(df18$Cdollar))*100), digit=2)` percent of the concession cost for Product 19.
+
+Figure 19 below shows the offices outside of the reject region and their location on the chi-square density curve for Product 18.
+
+``` {r product_18 graph, echo = FALSE, warning = FALSE, fig.dim=c(8,6), fig.cap = "Figure 19 - Chi-Square greater than 40 are outside of scale of this plot"}
+curve(dchisq(x, df = 1), from = 0, to = 40,
+      main = 'Under Perform Offices - Product 18',
+      ylab = 'Density',
+      lwd = 2)
+
+#create vector of x values
+x_vector <- seq(3.841, 40)
+
+#create vector of chi-square density values
+p_vector <- dchisq(x_vector, df = 1)
+
+#fill in portion of the density plot from 0 to 5 plus max
+polygon(c(x_vector, rev(x_vector)), c(p_vector, rep(0, length(p_vector))),
+        col = adjustcolor('red', alpha=0.3), border = NA)
+abline(v=3.841, col='red', lwd = 2, lty = "dotted")
+abline(v = P18_underPerform$Chi_Square, col=rainbow_hcl(21), lwd = 2)
+text(1, .025, "Reject Line\nAlpha 0.05")
+text <- "Reject Region Where Chi_Square > 3.841,  Alpha = 0.05 & DF = 1"
+mtext(text, side = 3)
+legend("topright", legend = c(P18_underPerform$Office), col = rainbow_hcl(21), lty = 1)
+
+```
+
+### Product 19
+
+```{r product19_dataset, echo=FALSE, warning=FALSE}
+df19 <- df0[df0$Product == 'PRODUCT_19', ]
+df19 <- df19 %>% filter(Ushipped >=30)
+df19 <- df19 %>% mutate(Non_Cunit=Ushipped - Cunit)
+df19 <- df19 %>% mutate(Avg_Cunit=Cunit/Ushipped)
+df19 <- df19 %>% mutate(Avg_Prod_Cunit=(sum(Cunit)/sum(Ushipped)))
+df19 <- df19 %>% mutate(Sum_Prod_Shipped=(sum(Ushipped)))
+df19 <- df19 %>% mutate(Sum_Prod_Non_Cunit=(sum(Non_Cunit)))
+df19 <- df19 %>% mutate(Avg_Cdollar=Cdollar / Ushipped)
+df19 <- df19 %>% mutate(Avg_Prod_Cdollar=sum(Cdollar)/sum(Ushipped))
+
+df19$P_Values <- apply(df19[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$p.value)
+df19$Chi_Square <- apply(df19[c("Sum_Prod_Non_Cunit", "Non_Cunit", "Sum_Prod_Shipped", "Ushipped")], MARGIN = 1, FUN = function(x) prop.test(x[1:2], n = x[3:4])$statistic)
+
+P19a_underPerform <- df19 %>% select(c(Office, Product, Cdollar, Cunit, Avg_Cunit, Avg_Prod_Cunit,  Chi_Square, P_Values)) %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841)
+P19_underPerform <- df19 %>% filter(Avg_Cunit > Avg_Prod_Cunit & Chi_Square > 3.841) %>% select(c(Office, Cdollar, Avg_Cunit, Avg_Prod_Cunit, Chi_Square, P_Values))
+
+p19 <- flextable(P19_underPerform)
+p19 <- colformat_double(p19, digits = 2)
+p19 <- set_header_labels(p19, office = "Office", Cdollar = "Office Level\nConcesson Cost($)", 
+    Avg_Cunit = "Office Level\nConcession Proportion", Avg_Prod_Cunit = "Product Level\nConcession Proportion", Chi_Square = "Chi Square" , P_Values = "p-Value")
+p19 <- set_table_properties(p19, layout = "autofit", width = 1)
+p19 <- theme_vanilla(p19)
+p19 <- add_footer_lines(p19, "df = 1, Chi Square Valuse > 3.841, Alpha = 0.5, All P-Values are significant - <0.05")
+p19 <- color(p19, part = "footer", color = "#666666")
+p19 <- set_caption(p19, caption = "Under Performing Offices - Product 19")
+
+
+```
+
+There is `r length(df19$Office)` sales office that has sold 30 or more of Product 19. There are `r length(P19_underPerform$Office)` sales offices that are under performing.
+
+# Summary
+
+```{r summary_underperform_dataset, echo=FALSE, warning=FALSE}
+underPerform <- rbind(P1a_underPerform, P2a_underPerform, P3a_underPerform, P4a_underPerform, P5a_underPerform, P6a_underPerform, P7a_underPerform, P8a_underPerform, P9a_underPerform, P10a_underPerform, P11a_underPerform, P12a_underPerform, P13a_underPerform, P14a_underPerform, P15a_underPerform, P16a_underPerform, P17a_underPerform, P18a_underPerform)
+
+underPerform_office <- subset(underPerform, select = c(Office, Product))
+underPerform_office <- underPerform_office %>% group_by(Office) %>% summarize(TotalProdbyOffice=length(Product))
+
+
+ou <- flextable(head(underPerform_office))
+ou <- colformat_double(ou, digits = 2)
+ou <- set_header_labels(ou, office = "Office", TotalProdbyOffice = "Number of Products")
+ou <- set_table_properties(ou, layout = "autofit", width = 1)
+ou <- theme_vanilla(ou)
+ou <- add_footer_lines(ou, "Partial list of Offices.  See Appendix for complete list")
+ou <- color(ou, part = "footer", color = "#666666")
+ou <- set_caption(ou, caption = "Number of Products by Under Performing Office")
+ou
+
+underPerform_group <- subset(underPerform, select = c(Office, Product))
+underPerform_group <- underPerform_group %>% group_by(Product) %>% summarize(TotalOfficebyProd=length(Office))
+
+
+pu <- flextable(underPerform_group)
+pu <- colformat_double(pu, digits = 2)
+pu <- set_header_labels(pu, Product = "Product", TotalOfficebyProd = "Number of Offices")
+pu <- set_table_properties(pu, layout = "autofit", width = 1)
+pu <- theme_vanilla(pu)
+pu <- add_footer_lines(pu, "No Under Performing Offices for Product 19")
+pu <- color(pu, part = "footer", color = "#666666")
+pu <- set_caption(pu, caption = "Under Performing Offices by Product")
+pu
+
+
+```
+
+In this analysis, sales offices were evaluated to determine if they claim a higher proportion of concession units at a product level as compared to the proportion of concession units claimed for the entire product level.  R software was used perform a two-proportions z-test to compare two observed proportions between sales office concession claim proportions, and proportion of concession claims for the product. Sales offices with a Pearson’s Chi-Square value greater than 3.841 were considered under performing offices, as the probability of the office claims proportion equaling the product claims proportion will be less than 5%.  The analysis shows there are `r length(unique(underPerform$Office))` with a Chi-Square value greater than 3.841.  The total concession cost from these offices is `r prettyNum((format((sum(underPerform$Cdollar)), digits=2)), big.mark = ",", scientific = FALSE)` dollars and the total concession units from these sales offices is `r prettyNum((format((sum(underPerform$Cunit)), digits=2)), big.mark = ",", scientific = FALSE)`, and the average concession cost per concession unit is `r format((sum(underPerform$Cdollar)/sum(underPerform$Cunit)), digits=2)` dollars per unit.  This is compared to the average concession dollar per unit for all product types of `r format((sum(df0$Cdollars)/sum(df0$Ushipped)), digits=2)` dollars per unit.  The under performing offices represent `r format(((sum(underPerform$Cunit)/sum(df0$Cunit))*100), digits=2)` percent of the total concession units.
+
+
+
+# Recommendations
+Using the data from this analysis, it is recommended the next step be an investigation of the causes for these sales offices to be under performing with relation to proportion of concession units. Some areas of focus could be patterns with particular product types, patterns with a particular customer, or the pattern with the unique nature of the product applications.  
+
+# Bibliography
+
+
+  Cambridge Dictionary. (April 2022), https://dictionary.cambridge.org/
+
+  Zeileis A, Fisher JC, Hornik K, Ihaka R, McWhite CD, Murrell P, Stauffer R, Wilke CO
+  (2020). “colorspace: A Toolbox for Manipulating and Assessing Colors and Palettes.”
+  _Journal of Statistical Software_, *96*(1), 1-49. doi: 10.18637/jss.v096.i01 (URL:
+  https://doi.org/10.18637/jss.v096.i01).
+
+  Zeileis A, Hornik K, Murrell P (2009). “Escaping RGBland: Selecting Colors for
+  Statistical Graphics.” _Computational Statistics \& Data Analysis_, *53*(9), 3259-3270.
+  doi: 10.1016/j.csda.2008.11.033 (URL: https://doi.org/10.1016/j.csda.2008.11.033).
+
+  Hadley Wickham, Romain François, Lionel Henry and Kirill Müller (2022). dplyr: A
+  Grammar of Data Manipulation. R package version 1.0.8.
+  https://CRAN.R-project.org/package=dplyr
+
+  David Gohel (2022). flextable: Functions for Tabular Reporting. R package version
+  0.7.0. https://CRAN.R-project.org/package=flextable
+
+  H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York,
+  2016.
+
+  Stefan Milton Bache and Hadley Wickham (2022). magrittr: A Forward-Pipe Operator for
+  R. R package version 2.0.3. https://CRAN.R-project.org/package=magrittr
+  
+  JJ Allaire and Yihui Xie and Jonathan McPherson and Javier Luraschi and Kevin Ushey and Aron
+  Atkins and Hadley Wickham and Joe Cheng and Winston Chang and Richard Iannone (2022).
+  rmarkdown: Dynamic Documents for R. R package version 2.12. URL https://rmarkdown.rstudio.com.
+
+  Hayunga, D. K. (2018). Sales concessions in the US housing market. The Journal of Real Estate Finance    and Economics, 56(1), 33-75.
+  
+  Yang, W. H., & Dai, D. S. (2006, October). Concession decision model of BOT projects based on a real     options approach. In 2006 International Conference on Management Science and Engineering (pp. 307-312).   IEEE.
+
+  Kwon, S., & Weingart, L. R. (2004). Unilateral concessions from the other party: concession behavior,    attributions, and negotiation judgments. Journal of Applied Psychology, 89(2), 263.
+
+# Appendix
+```{r appendix, echo=FALSE, warning=FALSE}
+oua <- flextable(underPerform_office)
+oua <- colformat_double(oua, digits = 2)
+oua <- set_header_labels(oua, office = "Office", TotalProdbyOffice = "Number of Products")
+oua <- set_table_properties(oua, layout = "autofit", width = 1)
+oua <- theme_vanilla(oua)
+oua <- color(oua, part = "footer", color = "#666666")
+oua <- set_caption(oua, caption = "Number of Products by Under Performing Office")
+oua
+```
